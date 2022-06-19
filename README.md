@@ -234,6 +234,8 @@ Data is stored in table format, we apply normalization in relational database
 - No more normalization, we store everything required by the report together
 - Instead of adding rows, we keep adding columns every next hour
 
+<img src="./SQL vs NoSQL Store" />
+
 #### 4 types of NoSQL Database
 - column
     - Cassandra
