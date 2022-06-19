@@ -258,3 +258,24 @@ HBase
 - master-based replication
 
 ## Step 4: Detailed Design - Data Processing
+
+### Processing Service
+- How to **scale** ?
+- How to achieve **high throughput** ?
+- How to **not lose data** when processing node crashes ?
+- What to do when **database is unavailable** or slow ?
+
+How to make data processing **scalable, reliable and fast** ?
+- Scalable = Partitioning
+- Reliable = Replication and check-pointing
+- Fast = In-memory
+
+#### Data aggregation
+**Should we pre-aggregate data in the processing service ?**
+- Choice 1:
+    - For every incoming event, we increase the count by 1 in the database
+- Choice 2:
+    - We store the temporally count in the processing service
+    - And sync the count to database every period of time
+
+Choice 2 is definitely better solution if we want to scale
