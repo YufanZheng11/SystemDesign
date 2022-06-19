@@ -135,6 +135,52 @@ Metrics to take into consideration
 | How to scale **Write** |
 | How to make both **writes and reads fast** |
 | How **not to lose data** |
+| How to achieve **strong consistency**? Trade-offs ? |
+| How to **recover data** in case of an outage |
+| How to ensure **data security** |
+| How to make it **extensible** |
+| Where to run (**cloud vs on-premises** data center) ? |
+| How much does it **cost** |
+
+#### SQL Database
+- We can first store data in a single machine
+- If a single machine is not enough, we can split the data into multiple machines
+    - The process is called **sharding** or **horizontal partitioning**
+    - Each shard stores a subset of data
+- As multiple machines exist, service needs to know
+    - How many machine exist ?
+    - Which one to pick to store & retrieve data ?
+
+We can have each service connects to the database and query / process.
+- Processing Service -> Store data -> Database
+- Query Service <- Retrieve data <- Database
+
+A better option is to introduce a light proxy server **Cluster Proxy**
+- Processing Service -> **Cluster Proxy** -> Store data -> Database
+- Query Service <- **Cluster Proxy** <- Retrieve data <- Database
+- Services only talk to Cluster Proxy only
+    - Service don't need to know each nodes & database machine any more
+- Proxy server talks to the database machines
+    - Proxy server knows all database machines
+    - Proxy server route requests to target machines / shards
+    - If a service dies, proxy machine knows
+    - If a new node is added to the cluster, proxy server knows
+- To make the proxy service know status of cluster
+    - We introduce the **configuration service** (i.e. **Zookeeper**)
+    - Instead of calling the database directly, we can apply **ShardProxy**
+- Shard Proxy can help
+    - cache query results
+    - monitor database instance health
+    - publish metrics
+    - terminate queries that take too long to return
+- How to ensure the data isn't lost?
+    - Replicate the data
+    - Master shard - follower shard
+    - Write goes to the master shard
+    - Read can go from master & follower shards
+    - Put the master data / follower data in different data center
+
+<img src="./SQL Database" />
 
 
 
