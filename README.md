@@ -182,6 +182,35 @@ A better option is to introduce a light proxy server **Cluster Proxy**
 
 <img src="./SQL Database" />
 
+#### NoSQL Database (Cassandra)
 
+How Cassandra nodes works?
+- Instead of having leaders & followers, each node are equal
+- No longer needs configuration service to monitor health of each shard
+- Allow shards talk to each other and exchange information about their state
+- Every second, shard exchange information with a few other shards (no more than 3)
+- Quick enough, state information about every node propagates throughout the cluster -- gossip protocol
+- SQL needs to have a Cluster Proxy to know location of each shards
+- Cassandra nodes know each other 
+    - request no need to call a specific component for routing requests
 
+How Cassandra nodes process the request
+- Process service send a request to node-4
+    - We can use a simple round robin algo to choose the initial node
+    - or we can just choose the node which is **closet** to the client in terms of **network distance**
+- The chosen node is named **coordinator node**, this node needs to decide
+    - which node to store data for the request
+    - we can use **consistent hashing** algo to pick the node
+    - make a call to the node which should store the data and wait for the response
+    - it will replicate the data at same time
+    - but wait for all replicates done is slow, it will consider success if 2 replications done -- **quorum writes**
+- Concept of **quorum read**
+    - When the query service retrieves data
+    - coordinator will **initialize several read requests in parallel**
+    - in theory, the coordinator node may get **different responses** from replica nodes
+        - because some nodes could have been unavailable when the write request happened
+        - let's say one node has stale data and other 2 nodes have up-to-date data
+        - read quorum defines min number of nodes that have to agree the response
+        - Cassandra uses the version number to determine the staleness of data
 
+<img src="./NoSQL Database" />
