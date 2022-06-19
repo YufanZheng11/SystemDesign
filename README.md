@@ -68,7 +68,7 @@ Write down in the whiteboard:
     - Performance
     - Availability
 - A simplest diagram showing the workflow
-User -> Click UI -> Add View Count Service -> Database -> Return View Count Service -> UI -> User
+    - User -> Click UI -> Add View Count Service -> Database -> Return View Count Service -> UI -> User
 
 ## Step 3: Detailed Design
 
@@ -95,4 +95,47 @@ In the count view example, we have **2** ways of saving the view data
 | Can recalculate numbers if needed | |
 | - | - |
 | Slow Read | Can query only when the way data was aggregated |
-| Costly for a large scale (Billions of events per day) | |
+| Costly for a large scale (Billions of events per day) | Require data aggregation pipeline |
+| | Hard or impossible to fix the bug |
+
+Decision making
+- Store the raw event ?
+- Aggregate the data on the fly ?
+
+Metrics to take into consideration
+- Expected data delay
+    - Time between the event happened & when it's proceed
+        1. If no more than several minutes - we must aggregate the data on the fly
+        2. If several hours is ok - we can store the raw events and process them in the background
+
+- **Stream Data Processing** >>> Choice 1
+- **Batch Data Processing** >>> Choice 2
+
+#### Store raw events in real time
+- Because the raw events are many
+    - We will store events for several days or week only
+    - Purge old data
+- Calculate the numbers in real time 
+    - so the statistics is available for users right away
+- By saving both raw events & aggregated data
+    - **Fast Read**
+    - **Ability to aggregate data differently**
+    - **Re-calculate statistics if needed**
+- Drawback
+    - The system will become expensive & complex
+
+#### What database will we choose ?
+- Both **SQL** and **NoSQL** database can scale and perform well
+- We need to consider the non functional requirements
+    - We need to evaluate the database against these requirements
+
+| Questions | 
+| ---- |
+| How to scale **Read** |
+| How to scale **Write** |
+| How to make both **writes and reads fast** |
+| How **not to lose data** |
+
+
+
+
