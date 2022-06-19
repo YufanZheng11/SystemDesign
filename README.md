@@ -70,7 +70,7 @@ Write down in the whiteboard:
 - A simplest diagram showing the workflow
     - User -> Click UI -> Add View Count Service -> Database -> Return View Count Service -> UI -> User
 
-## Step 3: Detailed Design
+## Step 3: Detailed Design - Data Storage
 
 ### Data Model - How do we store the data?
 In the count view example, we have **2** ways of saving the view data
@@ -214,3 +214,45 @@ How Cassandra nodes process the request
         - Cassandra uses the version number to determine the staleness of data
 
 <img src="./NoSQL Database" />
+
+#### Availability VS Consistency
+- Availability > Consistency
+- Show stale data rather than no data at all
+- Replication of data is slow
+    - Synchronous is slow
+    - We usually replicate the data asynchronously
+- Some nodes might have stale data **temporally**
+    - But after data propagate in whole nodes
+    - the data will eventually consistent -- this is what call **eventual consistency**
+
+### How to store data
+
+#### SQL database
+Data is stored in table format, we apply normalization in relational database
+
+#### NoSQL database
+- No more normalization, we store everything required by the report together
+- Instead of adding rows, we keep adding columns every next hour
+
+#### 4 types of NoSQL Database
+- column
+    - Cassandra
+    - HBase
+- document
+    - NoSQL
+- key-value
+- graph
+
+Cassandra is
+- Fault-tolerant
+- Scalable (both read-write throughput can scale upon added machine)
+- Support multi data center replications
+- Works well with time series data
+
+MongoDB
+- leader-based replication
+
+HBase
+- master-based replication
+
+## Step 4: Detailed Design - Data Processing
