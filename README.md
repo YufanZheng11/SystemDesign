@@ -490,3 +490,43 @@ Other technologies
 - Monitoring the services
     - AWS CloudWatch
     - ElasticSearch, Logstash, Kibana
+
+## Step 8: Bottlenecks, tradeoffs and more
+
+### How to identify bottlenecks
+- Performance testing
+    - Load testing -- measure how system works in specific expected load
+    - Stress testing -- measure how system works in unexpected loads
+    - Soak testing -- when a system is periodically meets heavy loads
+- With stress testing, we want to know
+    - A breaking point in the system - which component start to suffer first
+    - What resources would be: memory, CPU, network, disk I/O ?
+- With soak testing
+    - Find leaks in resources
+
+### How to generate high loads?
+- Tools like Apache JMeter can be used
+
+### How to ensure the system is running healthy 
+- Metrics
+- Dashboards
+- Alerts
+
+4 Golden signals of monitoring
+- Latency
+- Traffic
+- Errors
+- Saturation
+
+### How can we make sure the system produces accurate results ?
+- We can build audit system
+    - Weak audit system 
+        - continuously running end-to-end test
+        - run the query every period of time check if returned query match expected count
+    - Strong audit system
+        - calculates from a different path 
+        - store the data in another place, count from that location
+
+Old design - Lambda Architecture
+- Send events to both batch processing & stream processing
+- Validate values from both processes
