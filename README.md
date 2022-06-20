@@ -437,3 +437,56 @@ Example of load balancer:
     - human readable
 - Binary format: Thrift, Protocol, Buffers and Avro
     - more compact, and fast
+
+## Step 6: Detailed Design - Data Retrieval Path
+
+### Rollup solution for large time series data
+- Granularity
+    - Recent time records, we save per second/minutes
+    - Mid recent time records, we save per hour
+    - Long time ago records, save per day/week/month
+- Old data do not need to be stored in database
+    - They can be stored in object storage
+- Hot storage vs cold storage
+    - Hot storage - frequent used data, access fast
+    - Cold storage - less frequent used data
+
+### distributed cache
+- Store the query results in distributed cache to improve performance
+
+## Step 7: Technology stack
+Client side
+- Netty: high performance non-blocking IO framework for developing network applications
+- Netflix Hystrix
+- Polly
+Load balancing
+- NetScaler - hardware load balancer
+- NGINX - Software load balancer
+- AWS ELB - Cloud load balancer
+Messaging systems
+- Apache Kafka
+- Amazon Kinesis (Kafka public cloud counterpart)
+Data Processing
+- Apache Spark
+- Apache Flink
+- AWS Kinesis Data Analytics
+Storage
+- Apache Cassandra
+- Apache HBase
+- InfluxDB (Optimized for time series data)
+- Large data can be stored in Hadoop, or AWS Redshift
+- Cold data can be used in AWS S3
+Other technologies
+- Vitess
+    - Manage large clusters of MySQL instances
+- Redis
+    - In memory cache
+- RabbitMQ / AWS SQS
+    - Dead-letter queue (temporally undelivered messages)
+- RocksDB
+    - A high performance embeded database (i.e. for enrichment data)
+- Zookeeper or Netflix Eureka
+    - Service Registry
+- Monitoring the services
+    - AWS CloudWatch
+    - ElasticSearch, Logstash, Kibana
