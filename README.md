@@ -275,7 +275,165 @@ How to make data processing **scalable, reliable and fast** ?
 - Choice 1:
     - For every incoming event, we increase the count by 1 in the database
 - Choice 2:
-    - We store the temporally count in the processing service
+    - We store the temporally count in the processing service memory
     - And sync the count to database every period of time
 
 Choice 2 is definitely better solution if we want to scale
+
+We can better introduce a message queue if we can ensure no data is lost.
+- So user click event will be sent to the message queue
+- The processing service will pull data from the message queue
+- so even the processing service crash, the message queue data persist and can re-process them
+- We use the check point to tell where the data is consumed
+
+Processing service
+- Read count events from partition / shard
+- Count event in memory
+- Flush the counted values to the database periodically
+
+**Dead letter queue**
+- When flush data into database, in case of failure, save the data into this queue
+- A separate thread read data from this queue and store the data into the database
+- This can store data in the disk of processing service
+
+**Recovery memory data from failure**
+- Load events again from checkpoint
+- Or periodically store the states in a durable storage
+
+## Step 5: Detailed Design - Ingestion path components
+
+User -> API Gateway -> Load Balancer -> Partition Services -> Partitions -> Processing Service -> Databases
+
+| Partition Service Client | Load Balancer | Partition Service and Partitions |
+| ---- | ---- | ---- |
+| Blocking vs non-blocking I/O | Hardware vs software load balancing | Partition strategy |
+| Buffering and batching | Networking protocols | Service discovery |
+| Timeout | Load balancing algorithm | Replication |
+| Retries | DNS | Message format |
+| Exponential backoff and jitter | Health Check | |
+| Circuit breaker | High Availability | |
+
+
+### Blocking vs Non-Blocking
+When client make a request to the server, it builds a connection via socket
+- Blocking service will create a thread per connection
+    - Modern multi-core machines can handle hundreds of concurrent connections each
+    - But when more requests come, machines may go a death spiral, and whole cluster may die
+    - **Rate limiter** is important at this stage
+    - Blocking system is easier to debug issue, when a request comes, we can easily trace the process into each thread stack
+- Non-blocking service will pill up request from queue
+    - No more thread created
+    - More efficient as threads are more expensive than the picking up events
+    - High throughput
+    - Problem with non-blocking system is --- hard to debug
+
+### Buffering and batching 
+- We should somehow combine the events (buffering) and send them together (batching)
+- Sending them one by one is not efficient
+- Drawbacks: increase complexity
+
+### Timeouts
+- Connection timeouts
+    - usually tens of milliseconds
+- Request timeouts
+    - we can use 1% percentile timeout as the request timeout
+- Retry when timeouts
+    - to avoid retry storm --- exponential backoff and jitter
+
+### Exponential backoff and jitter
+- Retry with a different time intervals so avoid retry storm
+
+### Circuit breaker 
+- If request failure rate exceed threshold - stop retrying
+- If success rate becomes higher - re-start retrying
+- Make system hard to test
+- And hard to set the proper error threshold
+
+### Hardware vs software load balancing 
+- Hardware load balancers are network devices we buy from known organization
+    - Powerful machines with many CPUs, memory and optimized to handle very high throughput: millions of requests / second
+- Software load balancer is only software we install in the hardware we choose
+    - No need big machine, many load balancer are open source
+
+Example of load balancer:
+- ELB from AWS
+
+### Networking protocols
+- TCP load balancer
+    - Simply forward network package without inspecting the content
+    - Super fast, can handle 1m+ requests / second
+- Http load balancer
+    - LB gets HTTP request from a client
+    - Establish a connection to the server
+    - Send request to the server
+    - It can look inside the content of msg and make a choice upon content
+        - on cookie or header etc.
+
+### Load balancing algorithm
+- Round robin algo distribute the requests **in order** across the list of servers
+- Least connection algorithms distribute requests to the server with **lowest number of active connections**
+- Least response time algorithms distribute requests to the server with **fastest response time**
+- Hash-based algorithms distribute requests based on a key we define, such as client IP or url
+
+### Load balancer questions
+- How does client knows load balancer ?
+- How does load balancer know about services machines ?
+- How does load balancer guarantees high availability ?
+
+### DNS - Domain Name System
+- DNS is like a phone book in the internet
+    - It maintains domain names & translate them into IP address
+- We register the services in DNS, specify the domain name
+    - i.e. xxxservice.domain.com
+    - associate the domain with the IP address of the load balancer device
+- When client hits the domain name,
+    - a request is made to the load balancer
+- **how does load balance knows the services machine**
+    - we need to explicitly tell the load balancer the IP address of each machine
+    - Hardware / software LB provides API to register/unregister the servers
+
+### LB health check
+- LB needs to know which server is available & un-available
+- pings the server periodically 
+
+### LB High Availability
+- Primary & secondary nodes
+    - Primary : accepts connections and server requests
+    - Secondary : monitor the primary
+        - If the primary one fails to build connections
+        - Secondary takes over
+    - They lives in different data center
+
+### Partition services
+- Get messages and store them on **disk** in the form of append-only log file
+
+### Partition Strategy
+- Calculate the hash based on some content key - choose machine based on hash
+    - hot partition
+
+### Service discovery 
+- Server side discovery (Load balancer)
+- Client side discovery
+    - Every instance registers itself in some common place, named service registry
+    - service registry provides health check and high availability
+    - i.e. Zookeeper
+
+### Replication, When & how to choose replication strategy
+- Single leader replication
+    - SQL database
+    - Each partition will have a leader and several followers
+    - Only write and read from leader only
+    - When a leader is alive, all followers copy events from the leader
+    - When a leader dies, we choose a new leader from followers
+    - Leader keeps track of followers, check if they are alive
+        - If a follower dies, remove from the list
+- Leaderless replication
+    - Cassandra
+- Multi leader replication
+    - Mostly used when replicate data across different data centers
+
+### Message formats
+- Text format: XML, JSON
+    - human readable
+- Binary format: Thrift, Protocol, Buffers and Avro
+    - more compact, and fast
